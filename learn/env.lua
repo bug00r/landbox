@@ -2,7 +2,7 @@ print(_ENV)
 
 function print_table(tab)
     for key,val in pairs(tab) do
-        local value = string.find("function,table",type(val)) ~= nil and type(val) or val 
+        local value = string.find("function,table",type(val)) and type(val) or val 
         print("key: "..key.." val: "..value)
         if ( type(val) == "table" ) then
             print_table(val)
