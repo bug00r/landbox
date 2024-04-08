@@ -1,0 +1,93 @@
+States in this Dokument: 
+    Every point can have a state for a better overview:
+
+    States: [CHK]       This has to be checked and then add a [CHK-OK] with a solution or a link to a solution or 
+                        [CHK-NOK] and a given Reason why this not currently working.
+            [CHOOSE]    If there are multiple way to handle Things we have to decide with a Reason why[THIS] and why not[THIS-NOT] the other
+            [NEW]       New Feature that has to be check if it is possible to realize.
+            [OPEN]      New Feature that has checked and flagged as: Could be realized
+
+Requirements:
+    - a running plain lua script
+    - the lua to c bundler has to untouched running lua programm
+
+Nice to have:
+    - Bundler will work as plain Lua script.
+
+Process Draft: 
+    - We need a c Programm as entry to compile
+    - we need the used lua installation with libfolder, for using different lua versions
+    - We want to link c modules on a static way or copy the needed dynamic libs
+        - for this we need to know where the needed modules are exist
+            - As Best case with a small amount of needed configuration
+        - [CHK] we have to check if we can bundle dynamic scripts or we have to copy
+    - We want to collect custom lua scripts
+    - [CHK] We have to look how we can load modules out of an Bundle, like archive
+
+        [CHK-OK]:   http://lua-users.org/wiki/LuaModulesLoader
+
+                    Code:   module(..., package.seeall)
+
+                            local function load(modulename)
+                            local errmsg = ""
+                            -- Find source
+                            local modulepath = string.gsub(modulename, "%.", "/")
+                            for path in string.gmatch(package.path, "([^;]+)") do
+                                local filename = string.gsub(path, "%?", modulepath)
+                                local file = io.open(filename, "rb")
+                                if file then
+                                -- Compile and return the module
+                                return assert(loadstring(assert(file:read("*a")), filename))
+                                end
+                                errmsg = errmsg.."\n\tno file '"..filename.."' (checked with custom loader)"
+                            end
+                            return errmsg
+                            end
+
+                            -- Install the loader so that it's called just before the normal Lua loader
+                            table.insert(package.loaders, 2, load)
+    - [CHOOSE] How to implement bundle access
+        - as lua extension, then we have to declare minimal needed libs from lua
+        - as C Extenstion, this is needed if we want to access to blobs
+    - [CHOOSE] Which Representation the bundle should have:
+        - Archive like zip file with lib archive(supports more extensions but very large) or minizip(source only or minimal lib)
+        - Sqlite3 Database            
+    - [CHOOSE] How we should handle the bundle:
+        - As Single File BLOB on Executalbe
+        - As multiple File Blobs on Executalbe
+        - As Single File on Executable folder
+        - As multiple Files on execution folder
+        - others.
+
+
+
+OLD-DRAFT:
+
+Target:
+  creating lua apps on a tradtitional way:
+      1. create main script  
+      2. install rocks via lua locks for usage in script.
+      3. creating own dlls as module
+      4. adding static libs as module
+  building as static application:
+      1. creating own bootstrap c Application 
+        - this should be generic an usable for all apps
+        - all scripts and resources should be available as blob
+          .resources are needed files including tcl scripts
+          .all of them should be availabe by an archive for better handling
+TODO:
+  1. Create Process handling resource finding using archive.
+    - decide between both following options or taking both
+    1. it should be possible using external archive as file beside exe.
+    2. it should be possible using built in archive as blob inside exe.
+  2. Create process handling modules as DLL in by respecting package.cpath
+    1. using lib folder beside exe ba adding this at first position of package.cpath
+    2. carrying dlls into archive and extract them into lib path by executing
+      1. extraction on each execution or checking if dll is the same as extracted
+  3. Create build process for decision
+    1. should have only lua, gcc and make dependecies if possible.
+      - comfortable shell commands should be implemented in lua
+    2. should be most comfortable as possible, also most dependencies in an automatic manner
+
+
+

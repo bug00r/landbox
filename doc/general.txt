@@ -1,0 +1,442 @@
+######################
+Values and Types
+######################
+
+- No Types
+- All Values carry own Types
+- 8 basic Types:
+    - nil, only "nil" as Value
+    - boolean, true and false. Nil make condition false
+    - number
+        - integer and floating point type using subtypes 'integer' and 'float'
+        - standard is 64 bit bit can be compiled into 32bit(LUA_32BITS in luaconf.h)
+    - string
+        - immutable sequence of bytes, LUA is 8-bit clean.
+        - encoding agnostic
+        - length of string must fit in Lua Integer
+    - function
+        - lua can call functions written in lua and C, both represented as function
+    - userdata
+        - allows arbitrary C data stored in lua, its a block of raw memory
+        - two types:
+            - full userdata: a complete memory block managed by lua
+            - light userdata: a c pointer
+            - no predefined lua operator, except assignment and identity test
+            - Inside metatables it is possible do define operations for full userdata
+            - userdata cannot created oder modified in Lua, this guarantees data itegrity 
+              of data owned by host system.
+    - thread
+        - independed threads implemented as coroutines
+        - no relation to OS/native Threads
+    - table
+        - associative array 
+        - can indexed with all except: nil, NaN 
+        - Any key associated with nil ist NOT part of the array
+        - syntactic sugar  a.name == a["name"]
+        - floats used as keys are converted to their integer representation
+- Tables, functions, threads and full userdata values are objects. Variable who are 
+  containing them, are only containing references instead of values or value copies
+- lib-func type returns a string of the type containing a value
+
+#######################################
+Environments and the global Environment
+#######################################
+
+- _ENV, any reference to a free name ist bound to env. A Variable 'var' ist accessible at _ENV.var
+- _G, the global Environment. You can use variable with _G this will noch affect _G. Its never used
+  internally. Every loaded chunk its default value for its _ENV. All standard libraries are part of 
+  and everies _ENV from _G reference.
+
+##############
+Error Handling
+##############
+
+- several functions can raise an error who interrupts the flow of the program. This flow can continue
+  by catching this error.
+- Lua can explicitly raise an error by calling "error" function. This functions never returns.
+- On errors during compilation code chunks, the control went back to the host program. The host
+  is the LUA Interpreter if it was calling from Lua, otherwise the c Program
+- to catch errors you can make a protected call pcall (or xpcall). pcall calls a given function in 
+  protected mode. In reason of an error the running function stops went back to pcall and returned
+  an Status Code.
+- In default every error message is a String, but it can raise every value. This is the reason for the 
+  historical meaning behind "error message"
+- byusing xpcall(lua_pcall in C) you can add a message handler for error handling
+- there is a 'warn' Function for non interrupting messages
+
+##########################
+Metatables and Metamethods
+##########################
+
+- is like operator overloading in c++
+- every value in Lua can have metatables
+- the metatable entry "__add"(string with '__' prefix) is calling on   a + b
+- the most metavalues have to be a function OR a callable value, a value with __call metamethod inside
+- query metatable of any value with "getmetatable" Lua doing a "rawget" intern
+- tables are allowed to change their metatables OTHER TYPES are not allowed. Changing with 
+  "setmetatable"
+- Tables and USerdata have individual Metatables, multiple tables and userdata can share their metatabels
+- All other built in value have only one Metatable as example one metatable for string and another one for
+  all number.
+- By default a value has no metatable. The strings library sets them internally
+- there is a list for all given operator: 
+        http://www.lua.org/manual/5.4/manual.html    2.4 Metatables...
+- good practice: 
+    1. adding all metamethods in metatable before setting this to an object.
+    2. setting metatable directly after creating object.
+
+##################
+Garbage Collection
+##################
+
+- two types: 
+  - incremental (mark and sweep)
+  - generational
+  - weak tables
+
+##########
+coroutines
+##########
+
+- collaborative multithreading (no real mt)
+- coroutine.create(func): creates a coroutine handle with type thread with the coroutines 
+  main function "func". Its does not start the coroutine.
+- coroutine.resume(co [,val1,...]): starts the coroutine until it terminates or yields. the optional
+  val1... parameter will forwarded to the coroutines main func. On running successfully it returns true
+  with additional parameter calles with yield, otherwise false with an error object.
+- coroutine.yield: Suspends the execution of the calling coroutine. Any arguments to yield are passed 
+  as extra results to resume. 
+- coroutine.wrap: creates a new coroutine and returns a function. if you call this functions it internally
+  calles resume with given parameter.
+
+############
+The Language
+############
+
+- Lua is case sensitive: and (reserved)  And, AND are not reserved
+- Variables could be one of three types: global, local or table fields
+    - before assignment all variables have value of nil
+    - accessible var.Name is syntactic sugar for var['Name']
+    - access to global var x is the same like _ENV.x but _ENV is not global
+- Statements:
+         a = b + c
+        (print or io.write)('done')
+
+        The grammar could see this fragment in two ways:
+
+            a = b + c(print or io.write)('done')
+            a = b + c; (print or io.write)('done')
+
+- chunks are blocks with instructions who can be handled by the host programm in raw or precompiled
+  form(programm luac).
+    - Programs in source and compiled forms are interchangeable; Lua automatically detects the file 
+      type and acts accordingly (see load). 
+- multiple assignments possible:
+        i = 3          
+        i, a[i] = i+1, 20     -- does not affect a[4] because location a[i] with i = 3 was used first
+        x, y = y, x           -- swapping two vars
+        x, y, z = y, z, x     -- cyclically permutes x y and z
+
+  ... something skipped ...
+- Table constructors: 
+    Example:  a = { [f(1)] = g; "x", "y"; x = 1, f(x), [30] = 23; 45 }
+
+              is equivalent to
+
+              do
+                local t = {}
+                t[f(1)] = g
+                t[1] = "x"         -- 1st exp
+                t[2] = "y"         -- 2nd exp
+                t.x = 1            -- t["x"] = 1
+                t[3] = f(x)        -- 3rd exp
+                t[30] = 23
+                t[4] = 45          -- 4th exp
+                a = t
+              end
+- function calls
+    return (f(x))        -- results adjusted to 1
+    return 2 * f(x)      -- result multiplied by 2
+    return x, f(x)       -- additional results
+    f(x); return         -- results discarded
+    return x or f(x)     -- results adjusted to 1
+- function definitions
+
+    function f () body end          <=> f = function () body end
+
+    function t.a.b.c.f () body end  <=> t.a.b.c.f = function () body end
+
+    local function f () body end    <=> local f; f = function () body end
+
+                        not to:  local f = function () body end
+                        (This only makes a difference when the body of 
+                        the function contains references to f.)
+
+  Parameter:
+    
+    Example:
+      function f(a, b) end
+      function g(a, b, ...) end
+      function r() return 1,2,3 end
+
+          CALL             PARAMETERS
+     
+          f(3)             a=3, b=nil
+          f(3, 4)          a=3, b=4
+          f(3, 4, 5)       a=3, b=4
+          f(r(), 10)       a=1, b=10
+          f(r())           a=1, b=2
+          
+          g(3)             a=3, b=nil, ... -->  (nothing)
+          g(3, 4)          a=3, b=4,   ... -->  (nothing)
+          g(3, 4, 5, 8)    a=3, b=4,   ... -->  5  8
+          g(5, r())        a=5, b=1,   ... -->  2  3
+
+  Colon Syntax:
+    The colon syntax is used to emulate methods, adding an implicit 
+    extra parameter self to the function. Thus, the statement 
+
+      function t.a.b.c:f (params) body end
+       
+       is syntactic sugar for
+
+      t.a.b.c.f = function (self, params) body end
+
+      usage:
+        obj = {}
+        function obj:f (params) body end
+
+        -- calling without colon(:)
+        obj.f(obj, params)
+
+        -- calling with colon(:)
+        obj:f(params)
+
+- Visibility Rules
+
+     x = 10                -- global variable
+     do                    -- new block
+       local x = x         -- new 'x', with value 10
+       print(x)            --> 10
+       x = x+1
+       do                  -- another block
+         local x = x+1     -- another 'x'
+         print(x)          --> 12
+       end
+       print(x)            --> 11
+     end
+     print(x)              --> 10  (the global one)
+
+    Notice that each execution of a local statement defines new local variables. 
+    Consider the following example
+
+     a = {}
+     local x = 20
+     for i = 1, 10 do
+       local y = 0
+       a[i] = function () y = y + 1; return x + y end
+     end
+
+    The loop creates ten closures (that is, ten instances of the anonymous function). 
+    Each of these closures uses a different y variable, while all of them share the same x. 
+
+#################################
+The Application Program Interface
+#################################
+
+- lua API Check function arguments: default false => MACRO LUA_USE_APICHECK (during compilation)
+- Each LUA State has 1-n Threads, Type lus_state refers to thread and must be passed as first argument of
+  their creation functions like lue_newstate
+
+Stack:
+
+- accessible through lua_state object
+- if LUA calls C, the function got a new independent of previous Stack. The native Stack of the C Function is still active.
+- contains any arguments to the c Function and is the place to store the result.(lua_CFunction)
+- By interactiong with Lua the programmer is responsibe for handling thing like StackOverflow and ensuring to enough space
+  for the stack.
+
+  Exception: If a function has no fixed number of return values(see lua_call), then lus ansures that there is enough space
+
+  ALSO: be safe and use lua_checkstack before pushing.
+- If LUA calls C there are LUA_MINSTACK Extra Elements. this is defined with 20 by default.
+- Any Function in the API works only with valid oder acceptable Indices
+- An valid Index refers a modifiable LUA Value.
+- A valid Index is ((1 <= |index| <= top) + pseudo-Indices). Pseudo-Indices are accessible to C code but that are not in
+  the stack. Pseudo Indices are used to access registry(4.3: Reference Manual) and the upvalues of a C 
+  Function(4.2: ref Manual).
+- Acceptable Index:
+  - Are usable with Function whoch has no need a specific mutable position, but nonly a value(eg. quer functions)
+  - can be an valid index
+  - can have index after top of stack but inside allocated stack size( 0 is never a acceptable index)
+  - indices to upvalues >= real number of upvalues in current c Function
+  - Without any Notes API-Functions work with acceptable indices
+  - for functions called with acceptable indices any non-valid indes is treatet as the virtuale value with Type
+    LUA_TNONE, which is nil
+- Several API Functions return Pointers (const char*) to Lua strings in the Stack.
+  (See lua_pushfstring, lua_pushlstring, lua_pushstring, and lua_tolstring. 
+  See also luaL_checklstring, luaL_checkstring, and luaL_tolstring in the auxiliary library.)
+- Lua Strings as long valid as they index was not removed from th stack. This Indices can be moved (example: return value)
+- If the Index is a pseudo-Index that reffereing an upvalue the pointer is valid while the corresponding call is active 
+  and the corresponding upvalue is not modified
+-Some functions in the debug interface also return pointers to strings, namely lua_getlocal, lua_getupvalue, lua_setlocal, 
+  and lua_setupvalue. For these functions, the pointer is guaranteed to be valid while the caller function is active and 
+  the given closure (if one was given) is in the stack. 
+
+Closures:
+
+- ITs possible to associate values with created C Functions(see lua_pushcclosure).
+- These are upvalues and accessible to the function whenever it is called.
+- On each C Function call, its upvalues are located at specific pseudo-Indices(produced by macro lua_upvalueindex).
+- lua_upvalueindex(1) - lua_upvalueindex(n) where n is limited to 256(inkl.)
+- A C closure can also change the values of its corresponding upvalues. 
+
+Registry:
+
+- predefined table, usable by any C code. Existing at preudoindex LUA_REGISTRYINDEX
+- every value is storable
+- any other C libs hnas access too. use table valid  libname as key.
+- predefined LUA values and integer(used by luaL_ref) as keys should be prevent.
+- was added on every created lua_state and predefined values inside
+  - given predefined integer indices:    
+      LUA_RIDX_MAINTHREAD:  At this index the registry has the main thread of 
+                            the state. (The main thread is the one created together
+                            with the state.)
+      LUA_RIDX_GLOBALS:     At this index the registry has the global environment.
+
+Error Handling in C:
+
+- LUA uses C longjmp to handle Errors (if you compile with c++ it uses exceptions => LUAI_THROW)
+- A protected environment uses setjmp to set recovery point.
+- explicitly raise error: lua_error
+- error in unproteced environment will cause Luas panic Method => lua_atpanic 
+  and then calls abort.
+    - preventable but not good is redirect panic to a never return method
+- Rule: C Function calls by Lua should handle in protected mode.
+- If C Code operate on Lua States, registry or lua_newthread this should be done inside
+  API calls that cannot raise errors
+- panic runs like message handler, error object should be on top of the stack, but that is not
+  guaranteed, because there have to be enough space, panic has to check stack.
+- several functions are using following status code on error, defined in lua.host
+      LUA_OK (0):     no errors.
+      LUA_ERRRUN:     a runtime error.
+      LUA_ERRMEM:     memory allocation error. For such errors, Lua does not call the message handler.
+      LUA_ERRERR:     error while running the message handler.
+      LUA_ERRSYNTAX:  syntax error during precompilation.
+      LUA_YIELD:      the thread (coroutine) yields.
+      LUA_ERRFILE:    a file-related error; e.g., it cannot open or read the file.
+
+Handling Yields in C:
+
+- Read here: http://www.lua.org/manual/5.4/manual.html  4.5 – Handling Yields in C
+    or here: https://stackoverflow.com/questions/16416711/how-to-yield-lua-script-in-c-function
+
+List of C Functions in 4.6
+
+The Debug Interface:
+
+- no built in facilities
+- There is a struct "lua_Debug" which can filled with information by:
+    - lua_getstack: filling the private part of the struct
+    - lua_getinfo: fills the rest of the struct
+
+... fore more detailed information read 4.7 in the lua ref manual ;)
+
+The Auxiliary Library(5))Helper):
+
+- functions and types defined in lauxlib.h with prefix "luaL_"
+- built on top of basic API, provide nothing that cannot handle with the API. Should ensure more Code
+  Consistency
+- luaL_Buffer:
+    Interface:  luaL_add*
+- luaL_dofile:      Loads and runs the given file
+- luaL_dostring:    Loads and runs the given string
+- luaL_error:       raises an error
+- luaL_loadbuffer:  Equivalent to luaL_loadbufferx with mode equal to NULL. 
+- luaL_loadbufferx: Loads a buffer as a Lua chunk.Does the same like lua_load
+- luaL_loadfile:    Equivalent to luaL_loadfilex with mode equal to NULL. 
+- luaL_loadfilex:   Loads a file as a Lua chunk
+- luaL_loadstring:  Loads a string as a Lua chunk
+...
+- luaL_openlibs:    Opens all standard Lua libraries into the given state. 
+...
+- luaL_setfuncs:    Registers all functions in the array l (see luaL_Reg) 
+                    into the table on the top of the stack (below optional upvalues, see next). 
+...
+- luaL_Stream:(type)The standard representation for file handles used by the standard I/O library
+
+The Standard libraries(6):
+
+- to enable access in C call luaL_openlibs first. individually access with luaL_requiref and then 
+    alls of them declared in lualib.h
+    - luaopen_base:       open basic lib
+    - luaopen_package:    open package lib
+    - luaopen_coroutine:  open coroutine lib
+    - luaopen_string:     open string lib
+    - luaopen_utf8:       open utf8 lib
+    - luaopen_table:      open table lib
+    - luaopen_math:       open math lib
+    - luaopen_io:         open I/O lib
+    - luaopen_os:         open OS lib
+    - luaopen_debug:      open debug lib
+
+
+...
+
+Modules:
+
+- require: loads a given Module
+    - 1. package.loaded[modname]: it looks into package.loaded[modname] table first, 
+                                  if not found it tried to find a module loader 
+    - 2. package.searchers[modname]: the loader are set into table package.searchers[modname]
+    - 3. package.preload[modname]:   at first require queries package.preload[modname], if it 
+                                     found one, this must be a function and is the found loader 
+                                     of the required module.
+    - 4. package.path:  if not found a loader it tried a Lua Loader using package.path
+    - 5. package.cpath: if not found it searches a C loader using package.cpath
+    - it that also not working it tries and all-in-one loader
+    - IF A LOADER WAS FOUND, the loader was called with two arguments:
+        1. modname
+        2. a loader data, path where it found or
+    - If the loader does not return a nil value, the other value was assigned into package.loaded[modname]
+    - if nothing found, require raises an error
+
+- package.path and package.cpath were init in C code with ENV Variables:
+    - LUA_[C]PATH_5_4:  Versioned path
+    - LUA_[C]PATH:      Unversioned path
+  or default path set in luaconf.h
+
+- package.loadlib(libname, func): dynamically links he hostprogramm with the C Lib "libname", func is the funcname
+  or '*' it only links with the lib. Func must be follow lua_CFunction prototype
+
+String Manipulation(6.4):
+
+
+6.4.2 – Format Strings for Pack and Unpack
+
+
+fertig
+
+
+
+CONDITIONAL COMPILING:
+
+    #if SOME_OPTION
+        my_table = { ... }
+
+        function foo()
+            ...
+        end
+    #else
+        ...
+    #endif
+
+  For example, using gcc, the code above can be run like this:
+
+      //Options see here: https://gcc.gnu.org/onlinedocs/gcc/Preprocessor-Options.html#Preprocessor-Options
+      -E only preprocessor directives not compiling, assembling oder linking
+      -x c language
+      -P Inhibit generation of linemarkers in the output from the preprocessor
+      
+      gcc -E -P -DSOME_OPTION -x c test.lua | lua
+  
