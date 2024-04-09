@@ -10,6 +10,13 @@ States in this Dokument:
 Requirements:
     - a running plain lua script
     - the lua to c bundler has to untouched running lua programm
+    - Multiple Options
+      - Plain Lua Bundles
+        - Creates a monolithic lua app 
+          - lua Scripts into Bundle(see below types of bundles)
+          - all needed dynamic libs are stored beside
+      - C App Bundles
+        - Creates a C Program with usage of GCC or Clang (Should be possible to configure and check)
 
 Nice to have:
     - Bundler will work as plain Lua script.
