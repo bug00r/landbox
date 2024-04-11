@@ -7,7 +7,7 @@ function tblutils.print(tab, recursive)
         local value = string.find("function,table",type(val)) and type(val) or val 
         print("key: "..key.." val: "..tostring(value))
         if ( type(val) == "table" and dorecursive ) then
-            tblutils.print(val)
+            tblutils.print(val, dorecursive)
         end
     end
 end

@@ -12,7 +12,7 @@ function msghandler(msg)
     print("MSGH: "..msg)
 end
 
-print("arg table: "..tostring(pcall(tblutils.print_table,arg))) -- tostring because pcall returns an boolean
+print("arg table: "..tostring(pcall(tblutils.print,arg))) -- tostring because pcall returns an boolean
 print("state: "..tostring(pcall(raise_error,arg))) -- pcall quits silently
 print("state: "..tostring(xpcall(raise_error,msghandler,arg))) -- xpcall has msg handler
 
