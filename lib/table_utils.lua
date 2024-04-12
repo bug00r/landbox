@@ -1,4 +1,4 @@
-local tblutils = {}
+local tblutils = tblutils or {}
 
 function tblutils.print(tab, recursive)
     local dorecursive = type(recursive) == "boolean" and recursive or false
