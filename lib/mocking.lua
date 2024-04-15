@@ -25,11 +25,12 @@ function mocking.new ()
     return setmetatable({}, MockMetaTable)
 end
 
-local function mock_load(modulename)
+local function mock_load(name, modpath)
     -- every Module and Parameter are valid
-    print("mock_load: "..modulename)
-    return load("setmetatable({}, MockMetaTable)", modulename..tostring(math.random(1,100000)))
-    --return mocking.new()
+    print("mock_load: "..name.." path: "..tostring(modpath))
+    -- return load("setmetatable({}, MockMetaTable)", "blubb", 'bt', {})(name)
+    assert(false, "MOCK LOADER NOT WORKING ISSUE") -- may be fixable here https://gist.github.com/stevedonovan/1297868
+    return mocking.new()
 end
 
 local function print_loader()
