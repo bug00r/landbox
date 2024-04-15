@@ -7,6 +7,10 @@
 local mocking = mocking or {}
 
 local MockMetaTable = {
+    __add = function(self, a,b)
+        print("=> __add: "..tostring(a).." + "..tostring(b))
+        return self
+    end,
     __index = function(self, key)
         print("=> __index: "..tostring(key))
         return self
@@ -23,7 +27,9 @@ end
 
 local function mock_load(modulename)
     -- every Module and Parameter are valid
-    return mocking.new()
+    print("mock_load: "..modulename)
+    return load("setmetatable({}, MockMetaTable)", modulename..tostring(math.random(1,100000)))
+    --return mocking.new()
 end
 
 local function print_loader()
@@ -37,7 +43,7 @@ function mocking.add_loader()
         if ( v == mock_load) then foundKey = k; break end
     end
 
-    if ( foundKey == nil ) then table.insert(package.searchers, 2, mock_load) end
+    if ( foundKey == nil ) then table.insert(package.searchers, 1, mock_load) end
 end
 
 function mocking.remove_loader()
