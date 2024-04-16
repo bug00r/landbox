@@ -21,6 +21,32 @@ local MockMetaTable = {
     end
 }
 
+local mockerstr = [[
+
+    local MockMetaTable = {
+        __add = function(self, a,b)
+            print("=> __add: "..tostring(a).." + "..tostring(b))
+            return self
+        end,
+        __index = function(self, key)
+            print("=> __index: "..tostring(key))
+            return self
+        end,
+        __call = function(self, key)
+            print("=> __call: "..tostring(key))
+            return self
+        end
+    }
+
+    local mocker = mocker or setmetatable({}, MockMetaTable)
+
+    function mocker.test()
+        print("test")
+    end
+
+    return mocker
+]]
+
 function mocking.new ()
     return setmetatable({}, MockMetaTable)
 end
@@ -28,9 +54,9 @@ end
 local function mock_load(name, modpath)
     -- every Module and Parameter are valid
     print("mock_load: "..name.." path: "..tostring(modpath))
-    -- return load("setmetatable({}, MockMetaTable)", "blubb", 'bt', {})(name)
-    assert(false, "MOCK LOADER NOT WORKING ISSUE") -- may be fixable here https://gist.github.com/stevedonovan/1297868
-    return mocking.new()
+    return load(mockerstr)
+    --assert(false, "MOCK LOADER NOT WORKING ISSUE") -- may be fixable here https://gist.github.com/stevedonovan/1297868
+    --return mocking.new()
 end
 
 local function print_loader()

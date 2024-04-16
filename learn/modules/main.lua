@@ -49,6 +49,9 @@ tblutils.print(conf, true)
 mock.add_loader()
 
 print("parse module: "..conf.build.app.path)
+print("path before: "..package.path)
+--print("ENV")
+--tblutils.print(_ENV)
 
 local mod,err = loadfile(conf.build.app.path, "t", _ENV)
 if mod then
@@ -57,5 +60,8 @@ else
     print("module parse: "..err)
 end
 
+print("path after: "..package.path)
+--print("ENV")
+--tblutils.print(_ENV)
 -- Disable Mockloader, with multiple protection
 mock.remove_loader()
