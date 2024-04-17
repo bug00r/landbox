@@ -45,7 +45,13 @@ local conf = ConfigLoader(args.config)
 print("config: "..tostring(conf))
 tblutils.print(conf, true)
 
--- Enable MockLoader, with multiple protection
+--[[
+    
+Enable MockLoader for analyzing Package Structure.
+
+Problem: The mock Lib prevent calling scripts required on level > 1 (maine entry)
+    
+
 mock.add_loader()
 
 print("parse module: "..conf.build.app.path)
@@ -65,3 +71,21 @@ print("path after: "..package.path)
 --tblutils.print(_ENV)
 -- Disable Mockloader, with multiple protection
 mock.remove_loader()
+
+]] 
+
+
+
+--[[
+    Problem about first thoughts: 
+    1. The mock Lib prevent calling scripts required on level > 1 (maine entry)
+    2. For a complete Analyzing we need a package path interceptor
+        - We need an entry Directory for the Main script
+        - The Interceptor for path an cpath has to extend relative path additions with main path 
+        - We need a intercepting Loader for collecting all Module Names 
+    3. There are a some other ways to load lua code
+        - load 
+        - loadfile
+
+        We should check and loadfile interceptor in reason of internal handling
+]]
